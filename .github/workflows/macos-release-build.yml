@@ -119,18 +119,26 @@ jobs:
         run: |
           export SURFER_PLATFORM="darwin"
           bash .github/workflows/src/release-build.sh
-          hdiutil convert ./dist/*.dmg -format UDZO -imagekey zlib-level=9 -o zen.macos-${{ matrix.arch }}.dmg
+          cd ./engine/obj-${{ matrix.arch }}-apple-darwin/dist #Location of working compiled .app, compress for upload
+          tar -czvf zen-${{ matrix.arch }}.tar.gz ./*.app
+          mv *.tar.gz ../../../
+          cd ../../../
+          cd ./engine/obj-${{ matrix.arch }}-apple-darwin/instrumented/dist #Location of broken (in local testing) compiled app, I can't get it to launch but the original action uploads it so why not include it.
+          mkdir "Broken Files"; cp -r *.app ./"Broken Files"; cp *.dmg ./"Broken Files"; cp zen*.zip ./"Broken Files"
+          echo "These files were geenrated and uploaded in the original github action, however they do not launch based on my local testing. I thought I should upload them anyways since the original action did regardless. For a working app, use the one in zen.tar.gz" > ./"Broken Files"/readme.txt
+          tar -cvzf brokenFiles-${{ matrix.arch }}.tar.gz ./"Broken Files"
+          mv *.tar.gz ../../../../
+          cd ../../../../
           
-      - name: Upload Zen
+      - name: Upload Working Zen App
         uses: actions/upload-artifact@v4
         with:
-          retention-days: 5
-          name: zen.dmg
-          path: ./zen.macos-${{ matrix.arch }}.dmg
-
-      - name: Upload build artifact (update manifests)
+          retention-days: 80
+          name: zen-${{ matrix.arch }}.tar.gz
+          path: ./zen-${{ matrix.arch }}.tar.gz
+      - name: Upload Broken Zen Files
         uses: actions/upload-artifact@v4
         with:
-          retention-days: 5
-          name: macos_update_manifest_${{ matrix.arch }}
-          path: ./dist/update
+          retention-days: 80
+          name: brokenFiles-${{ matrix.arch }}.tar.gz
+          path: ./brokenFiles-${{ matrix.arch }}.tar.gz
